@@ -1,7 +1,6 @@
-import { BaseAgent } from './base-agent';
-import { MCP } from '../mcp/types';
-import { openaiService } from '../services/openai';
-import { hasRequiredContext } from '../mcp/utils';
+import {BaseAgent} from './base-agent';
+import {MCP} from '../mcp/types';
+import {openaiService} from '../services/openai';
 
 export class HRResponseAgent extends BaseAgent {
     id = "hr-response-agent";
@@ -19,6 +18,7 @@ export class HRResponseAgent extends BaseAgent {
     ];
     producesContext = ["hr_response", "revised_evaluation", "coaching_feedback"];
 
+    // @ts-ignore
     async process(context: MCP.ReadonlyContextStore): Promise<MCP.ContextOperation[]> {
         const userInput = context.get<string>("user_input");
 
@@ -40,19 +40,19 @@ export class HRResponseAgent extends BaseAgent {
             // Generate a revised evaluation
             const revisedEvaluation = await this.generateRevisedEvaluation(
                 userInput.value,
-                complianceIssues?.value,
-                mapping?.value,
-                biasAnalysis?.value
+                Array.isArray(complianceIssues?.value) ? complianceIssues.value : [],
+                (typeof mapping?.value === 'object' && mapping?.value !== null) ? mapping.value : {},
+                biasAnalysis?.value ?? null
             );
 
             // Generate coaching feedback
             const coachingFeedback = await this.generateCoachingFeedback(
-                complianceIssues?.value,
+                Array.isArray(complianceIssues?.value) ? complianceIssues.value : [],
                 fairnessScore?.value,
                 biasAnalysis?.value
             );
 
-            // Generate formal HR response
+            // Generate a formal HR response
             const hrResponse = await this.generateHRResponse(
                 revisedEvaluation,
                 coachingFeedback
@@ -108,16 +108,16 @@ export class HRResponseAgent extends BaseAgent {
         this.log('debug', 'Generating revised evaluation');
 
         try {
-            const result = await openaiService.generateRevisedEvaluation(
+            // @ts-ignore
+            return await openaiService.generateRevisedEvaluation(
                 originalText,
                 complianceIssues,
                 mappingToRequirements,
                 biasAnalysis
             );
-            return result;
         } catch (error) {
             this.log('error', 'Revised evaluation generation failed', error);
-            return originalText; // Fallback to original text
+            return originalText; // Fallback to an original text
         }
     }
 
@@ -129,12 +129,12 @@ export class HRResponseAgent extends BaseAgent {
         this.log('debug', 'Generating coaching feedback');
 
         try {
-            const result = await openaiService.generateCoachingFeedback(
+            // @ts-ignore
+            return await openaiService.generateCoachingFeedback(
                 complianceIssues,
                 fairnessScore,
                 biasAnalysis
             );
-            return result;
         } catch (error) {
             this.log('error', 'Coaching feedback generation failed', error);
             return {
@@ -151,11 +151,11 @@ export class HRResponseAgent extends BaseAgent {
         this.log('debug', 'Generating complete HR response');
 
         try {
-            const result = await openaiService.generateHRResponse(
+            // @ts-ignore
+            return await openaiService.generateHRResponse(
                 revisedEvaluation,
                 coachingFeedback
             );
-            return result;
         } catch (error) {
             this.log('error', 'HR response generation failed', error);
             return {

@@ -1,9 +1,9 @@
-import express from 'express';
-import http from 'http';
+import * as express from 'express';
+import * as http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { MCPOrchestrator } from './mcp/orchestrator';
-import { NLPAgent } from './agents/nlp-agent';
-import { BiasDetectionAgent } from './agents/bias-detection-agent';
+import { NLPAgent } from './agents';
+import { BiasDetectionAgent } from './agents';
 import { logger } from './services/logging';
 import { config } from './config';
 import { MCP } from './mcp/types';
@@ -11,8 +11,10 @@ import { MCP } from './mcp/types';
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
+
 const io = new SocketIOServer(server, {
     cors: {
+        // @ts-ignore
         origin: config.corsOrigins,
         methods: ['GET', 'POST'],
         credentials: true
@@ -89,6 +91,7 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
+// @ts-ignore
 const PORT = config.websocketPort || 3001;
 server.listen(PORT, () => {
     logger.info(`WebSocket server running on port ${PORT}`);

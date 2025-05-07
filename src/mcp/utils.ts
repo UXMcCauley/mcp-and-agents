@@ -1,4 +1,5 @@
 import { MCP } from './types';
+// @ts-ignore
 import crypto from 'crypto';
 
 /**

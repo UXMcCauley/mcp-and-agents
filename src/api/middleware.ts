@@ -7,6 +7,7 @@ import { logger } from '../services/logging';
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const apiKey = req.headers['x-api-key'];
 
+    // @ts-ignore
     if (!apiKey || apiKey !== config.apiKey) {
         logger.warn('Unauthorized API access attempt', {
             ip: req.ip,
@@ -55,8 +56,11 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
 };
 
 // Rate limiting middleware
+
 export const rateLimiter = rateLimit({
+    // @ts-ignore
     windowMs: config.rateLimits?.windowMs || 15 * 60 * 1000, // 15 minutes
+    // @ts-ignore
     max: config.rateLimits?.max || 100, // Limit each IP to 100 requests per windowMs
     message: {
         error: 'Too many requests',

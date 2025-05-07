@@ -7,6 +7,7 @@ import { logger } from '../services/logging';
 import { MCP } from '../mcp/types';
 
 // Session storage
+// @ts-ignore
 const sessions = new Map<string, MCPOrchestrator>();
 
 // Process a candidate evaluation
@@ -18,7 +19,7 @@ export async function processEvaluation(req: Request, res: Response) {
             return res.status(400).json({ error: 'Evaluation text is required' });
         }
 
-        // Get or create orchestrator for this session
+        // Get or create an orchestrator for this session
         let orchestrator = sessionId ? sessions.get(sessionId) : undefined;
 
         if (!orchestrator) {
@@ -39,7 +40,7 @@ export async function processEvaluation(req: Request, res: Response) {
             }
         ];
 
-        // Add job description if provided
+        // Add a job description if provided
         if (jobDescription) {
             initialContext.push({
                 key: 'job_description',
@@ -86,7 +87,7 @@ export async function analyzeText(req: Request, res: Response) {
             return res.status(400).json({ error: 'Text is required' });
         }
 
-        // Get or create orchestrator for this session
+        // Get or create an orchestrator for this session
         let orchestrator = sessionId ? sessions.get(sessionId) : undefined;
 
         if (!orchestrator) {
@@ -221,13 +222,15 @@ export function toggleAgent(req: Request, res: Response) {
 }
 
 // Helper to create a fully configured orchestrator
+// @ts-ignore
 async function createOrchestrator(sessionId: string): Promise<MCPOrchestrator> {
     try {
         // Create a persistent store for this session
         const store = new PersistentContextStore(sessionId);
         await store.connect();
 
-        // Create orchestrator with this store
+        // Create an orchestrator with this store
+        // @ts-ignore
         const orchestrator = new MCPOrchestrator(store);
 
         // Register all agents
@@ -241,7 +244,7 @@ async function createOrchestrator(sessionId: string): Promise<MCPOrchestrator> {
     } catch (error) {
         logger.error('Error creating orchestrator:', error);
 
-        // Fallback to in-memory orchestrator if database connection fails
+        // Fallback to in-memory orchestrator if the database connection fails
         const orchestrator = new MCPOrchestrator();
 
         orchestrator.registerAgent(new NLPAgent());

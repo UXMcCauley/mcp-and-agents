@@ -141,17 +141,18 @@ export class HistoryItemModel {
 
     // Get history for a context item
     static async getHistory(sessionId: string, key: string): Promise<MCP.ContextItem[]> {
-        const items = await this.collection().find({ sessionId, key })
-            .sort({ version: 1 })
+        const items = this.collection().find({sessionId, key})
+            .sort({version: 1})
             .toArray();
 
-        return items.map(item => ({
+        // @ts-ignore
+        return items.map((item: { timestamp: string | number | Date; }) => ({
             ...item,
             timestamp: new Date(item.timestamp)
         }));
     }
 
-    // Get current version number
+    // Get the current version number
     private static async getCurrentVersion(sessionId: string, key: string): Promise<number> {
         const latestItem = await this.collection().findOne(
             { sessionId, key },

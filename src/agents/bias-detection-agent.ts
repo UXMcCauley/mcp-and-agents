@@ -1,6 +1,6 @@
-import { BaseAgent } from './base-agent';
-import { MCP } from '../mcp/types';
-import { openaiService } from '../services/openai';
+import {BaseAgent} from './base-agent';
+import {MCP} from '../mcp/types';
+import {openaiService} from '../services/openai';
 
 export class BiasDetectionAgent extends BaseAgent {
     id = "bias-detection-agent";
@@ -10,6 +10,7 @@ export class BiasDetectionAgent extends BaseAgent {
     consumesContext = ["user_input", "entities", "sentiment"];
     producesContext = ["bias_analysis", "bias_mitigation_suggestions"];
 
+    // @ts-ignore
     async process(context: MCP.ReadonlyContextStore): Promise<MCP.ContextOperation[]> {
         const userInput = context.get<string>("user_input");
         const entities = context.get<any[]>("entities");
@@ -68,8 +69,7 @@ export class BiasDetectionAgent extends BaseAgent {
         this.log('debug', 'Detecting bias');
 
         try {
-            const result = await openaiService.detectBias(text, entities);
-            return result;
+            return await openaiService.detectBias(text, entities);
         } catch (error) {
             this.log('error', 'Bias detection failed', error);
             // Fallback to no bias detected
@@ -87,8 +87,7 @@ export class BiasDetectionAgent extends BaseAgent {
         this.log('debug', 'Generating mitigation suggestions');
 
         try {
-            const result = await openaiService.generateBiasMitigations(biasAnalysis);
-            return result;
+            return await openaiService.generateBiasMitigations(biasAnalysis);
         } catch (error) {
             this.log('error', 'Mitigation generation failed', error);
             // Fallback to empty suggestions

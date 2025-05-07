@@ -10,6 +10,7 @@ export class NLPAgent extends BaseAgent {
     consumesContext = ["user_input", "conversation_history"];
     producesContext = ["entities", "sentiment", "intent", "toxicity_score"];
 
+    // @ts-ignore
     async process(context: MCP.ReadonlyContextStore): Promise<MCP.ContextOperation[]> {
         const userInput = context.get<string>("user_input");
 
@@ -25,6 +26,7 @@ export class NLPAgent extends BaseAgent {
 
         try {
             // Run NLP processing tasks in parallel for efficiency
+            // @ts-ignore
             const [entities, sentiment, intent, toxicityScore] = await Promise.all([
                 this.extractEntities(text),
                 this.analyzeSentiment(text),

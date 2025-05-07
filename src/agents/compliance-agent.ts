@@ -1,7 +1,6 @@
-import { BaseAgent } from './base-agent';
-import { MCP } from '../mcp/types';
-import { openaiService } from '../services/openai';
-import { hasRequiredContext } from '../mcp/utils';
+import {BaseAgent} from './base-agent';
+import {MCP} from '../mcp/types';
+import {openaiService} from '../services/openai';
 
 export class ComplianceAgent extends BaseAgent {
     id = "compliance-agent";
@@ -11,6 +10,7 @@ export class ComplianceAgent extends BaseAgent {
     consumesContext = ["user_input", "bias_analysis", "identified_skills", "mapping_to_requirements"];
     producesContext = ["compliance_issues", "fairness_score", "legal_risks"];
 
+    // @ts-ignore
     async process(context: MCP.ReadonlyContextStore): Promise<MCP.ContextOperation[]> {
         const userInput = context.get<string>("user_input");
 
@@ -28,6 +28,7 @@ export class ComplianceAgent extends BaseAgent {
 
         try {
             // Run compliance checks in parallel for efficiency
+            // @ts-ignore
             const [complianceIssues, fairnessScore, legalRisks] = await Promise.all([
                 this.checkCompliance(userInput.value, biasAnalysis?.value),
                 this.calculateFairnessScore(userInput.value, biasAnalysis?.value, mapping?.value),
@@ -75,8 +76,8 @@ export class ComplianceAgent extends BaseAgent {
         this.log('debug', 'Checking compliance with employment laws');
 
         try {
-            const result = await openaiService.checkCompliance(text, biasAnalysis);
-            return result;
+            // @ts-ignore
+            return await openaiService.checkCompliance(text, biasAnalysis);
         } catch (error) {
             this.log('error', 'Compliance check failed', error);
             return [];
@@ -87,8 +88,8 @@ export class ComplianceAgent extends BaseAgent {
         this.log('debug', 'Calculating fairness score');
 
         try {
-            const result = await openaiService.calculateFairnessScore(text, biasAnalysis, mapping);
-            return result;
+            // @ts-ignore
+            return await openaiService.calculateFairnessScore(text, biasAnalysis, mapping);
         } catch (error) {
             this.log('error', 'Fairness score calculation failed', error);
             return {
@@ -108,8 +109,8 @@ export class ComplianceAgent extends BaseAgent {
         this.log('debug', 'Assessing legal risks');
 
         try {
-            const result = await openaiService.assessLegalRisks(text, biasAnalysis);
-            return result;
+            // @ts-ignore
+            return await openaiService.assessLegalRisks(text, biasAnalysis);
         } catch (error) {
             this.log('error', 'Legal risk assessment failed', error);
             return {

@@ -1,10 +1,10 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { MCPOrchestrator } from './mcp/orchestrator';
-import { NLPAgent } from './agents/nlp-agent';
-import { BiasDetectionAgent } from './agents/bias-detection-agent';
-import { JobRequisiteAgent } from './agents/job-requisite-agent';
-import { ComplianceAgent } from './agents/compliance-agent';
-import { HRResponseAgent } from './agents/hr-response-agent';
+import { NLPAgent } from './agents';
+import { BiasDetectionAgent } from './agents';
+import { JobRequisiteAgent } from './agents';
+import { ComplianceAgent } from './agents';
+import { HRResponseAgent } from './agents';
 import { logger } from './services/logging';
 import { MCP } from './mcp/types';
 

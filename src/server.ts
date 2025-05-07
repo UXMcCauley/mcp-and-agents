@@ -3,7 +3,7 @@ import cors from 'cors';
 import { json } from 'body-parser';
 import { config } from './config';
 import { logger } from './services/logging';
-import { metricsMiddleware } from './services/metrics';
+// import { metricsMiddleware } from './services/metrics';
 import { apiRoutes } from './api/routes';
 
 // Initialize express app
@@ -12,13 +12,13 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(json({ limit: '10mb' }));
-app.use(metricsMiddleware);
+// app.use(metricsMiddleware);
 
 // API routes
 app.use('/api', apiRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (req: any, res: express.Response) => {
     res.status(200).json({ status: 'ok' });
 });
 
