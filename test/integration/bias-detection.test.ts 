@@ -1,0 +1,176 @@
+import { MCPOrchestrator } from '../../src/mcp/orchestrator';
+import { NLPAgent } from '../../src/agents/nlp-agent';
+import { BiasDetectionAgent } from '../../src/agents/bias-detection-agent';
+import { MCP } from '../../src/mcp/types';
+
+// Mock the OpenAI service
+jest.mock('../../src/services/openai', () => ({
+  openaiService: {
+    extractEntities: jest.fn().mockResolvedValue([
+      { type: "PERSON", value: "John", confidence: 0.9 }
+    ]),
+    analyzeSentiment: jest.fn().mockResolvedValue({
+      score: 0.7,
+      label: "positive",
+      confidence: 0.8
+    }),
+    detectIntent: jest.fn().mockResolvedValue({
+      primary: "statement",
+      secondary: [],
+      confidence: 0.85
+    }),
+    analyzeToxicity: jest.fn().mockResolvedValue({
+      overall: 0.1,
+      categories: {
+        harassment: 0.05,
+        hate_speech: 0.02,
+        self_harm: 0.01,
+        sexual: 0.03,
+        violence: 0.02
+      },
+      confidence: 0.9
+    }),
+    detectBias: jest.fn().mockImplementation((text) => {
+      // Detect bias if text contains certain keywords
+      const hasBias = text.toLowerCase().includes('young') ||
+                      text.toLowerCase().includes('he is a natural');
+
+      return Promise.resolve({
+        biasDetected: hasBias,
+        biasTypes: hasBias ? ["gender", "age"] : [],
+        severity: hasBias ? 0.7 : 0,
+        examples: hasBias ? [
+          { text: "young", biasType: "age", severity: 0.7 },
+          { text: "he is a natural", biasType: "gender", severity: 0.6 }
+        ] : [],
+        confidence: 0.85
+      });
+    }),
+    generateBiasMitigations: jest.fn().mockResolvedValue([
+      {
+        original: "young",
+        suggestion: "experienced",
+        reasoning: "Avoid age-related terms"
+      },
+      {
+        original: "he is a natural",
+        suggestion: "they are skilled",
+        reasoning: "Use gender-neutral language"
+      }
+    ])
+  }
+}));
+
+describe('Bias Detection Integration', () => {
+  let orchestrator: MCPOrchestrator;
+
+  beforeEach(() => {
+    orchestrator = new MCPOrchestrator();
+    orchestrator.registerAgent(new NLPAgent());
+    orchestrator.registerAgent(new BiasDetectionAgent());
+  });
+
+  test('should detect bias in text with biased language', async () => {
+    const biasedText = "John is young and he is a natural leader.";
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'user_input',
+        value: biasedText,
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    // Check that bias was detected
+    expect(store.has('bias_analysis')).toBe(true);
+    expect(store.get('bias_analysis')?.value.biasDetected).toBe(true);
+
+    // Check that mitigation suggestions were generated
+    expect(store.has('bias_mitigation_suggestions')).toBe(true);
+    expect(store.get('bias_mitigation_suggestions')?.value.length).toBeGreaterThan(0);
+
+    // Check correct bias types
+    const biasAnalysis = store.get('bias_analysis')?.value;
+    expect(biasAnalysis.biasTypes).toContain('gender');
+    expect(biasAnalysis.biasTypes).toContain('age');
+  });
+
+  test('should not detect bias in neutral text', async () => {
+    const neutralText = "Taylor has ten years of experience in project management.";
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'user_input',
+        value: neutralText,
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    // NLP analysis should be present but no bias detected
+    expect(store.has('entities')).toBe(true);
+    expect(store.has('sentiment')).toBe(true);
+
+    // No bias analysis should be added
+    expect(store.has('bias_analysis')).toBe(false);
+    expect(store.has('bias_mitigation_suggestions')).toBe(false);
+  });
+
+  test('should extract entities and analyze sentiment correctly', async () => {
+    const text = "John delivered an excellent presentation yesterday.";
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'user_input',
+        value: text,
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    // Check that entities were extracted
+    expect(store.has('entities')).toBe(true);
+    expect(store.get('entities')?.value[0].value).toBe('John');
+
+    // Check that sentiment was analyzed
+    expect(store.has('sentiment')).toBe(true);
+    expect(store.get('sentiment')?.value.label).toBe('positive');
+  });
+
+  test('should handle empty input gracefully', async () => {
+    const emptyText = "";
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'user_input',
+        value: emptyText,
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    // Only user_input should be present
+    expect(store.getAllKeys()).toEqual(['user_input']);
+  });
+});

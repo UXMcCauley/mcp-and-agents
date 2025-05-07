@@ -1,0 +1,242 @@
+import { MCPOrchestrator } from '../../src/mcp/orchestrator';
+import { MCP } from '../../src/mcp/types';
+import { BaseAgent } from '../../src/agents/base-agent';
+
+// Mock agent implementation
+class MockAgent extends BaseAgent {
+  id = "mock-agent";
+  name = "Mock Agent";
+  description = "Test agent for unit tests";
+  capabilities = ["testing"];
+  consumesContext = ["test_input"];
+  producesContext = ["test_output"];
+
+  hasProcessed = false;
+  shouldThrowError = false;
+
+  async process(context: MCP.ReadonlyContextStore): Promise<MCP.ContextOperation[]> {
+    if (this.shouldThrowError) {
+      throw new Error('Test error');
+    }
+
+    const input = context.get<string>("test_input");
+
+    if (!input) {
+      return [];
+    }
+
+    this.hasProcessed = true;
+
+    return [
+      {
+        type: 'add',
+        item: {
+          key: 'test_output',
+          value: `Processed: ${input.value}`,
+          confidence: 1.0,
+          source: this.id,
+          timestamp: new Date()
+        }
+      }
+    ];
+  }
+}
+
+describe('MCPOrchestrator', () => {
+  let orchestrator: MCPOrchestrator;
+  let mockAgent: MockAgent;
+
+  beforeEach(() => {
+    orchestrator = new MCPOrchestrator();
+    mockAgent = new MockAgent();
+  });
+
+  test('should register an agent', () => {
+    orchestrator.registerAgent(mockAgent);
+
+    // Implementation detail: checking agent was registered
+    expect((orchestrator as any).agents.has(mockAgent.id)).toBe(true);
+  });
+
+  test('should not register same agent twice', () => {
+    orchestrator.registerAgent(mockAgent);
+
+    expect(() => {
+      orchestrator.registerAgent(mockAgent);
+    }).toThrow();
+  });
+
+  test('should process context through agents', async () => {
+    orchestrator.registerAgent(mockAgent);
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'test_input',
+        value: 'test value',
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    expect(mockAgent.hasProcessed).toBe(true);
+    expect(store.has('test_output')).toBe(true);
+    expect(store.get('test_output')?.value).toBe('Processed: test value');
+  });
+
+  test('should handle agent errors gracefully', async () => {
+    mockAgent.shouldThrowError = true;
+    orchestrator.registerAgent(mockAgent);
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'test_input',
+        value: 'test value',
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    // Should not throw error
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    // Agent should have been called but failed
+    expect(store.has('test_output')).toBe(false);
+  });
+
+  test('should not process agents with missing context', async () => {
+    orchestrator.registerAgent(mockAgent);
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'wrong_input',
+        value: 'test value',
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    expect(mockAgent.hasProcessed).toBe(false);
+  });
+
+  test('should process multiple iterations when needed', async () => {
+    // First agent consumes test_input, produces intermediate
+    const firstAgent = new MockAgent();
+    firstAgent.id = 'first-agent';
+    firstAgent.consumesContext = ['test_input'];
+    firstAgent.producesContext = ['intermediate'];
+    firstAgent.process = async (context) => {
+      const input = context.get<string>('test_input');
+      if (!input) return [];
+
+      return [
+        {
+          type: 'add',
+          item: {
+            key: 'intermediate',
+            value: `Step 1: ${input.value}`,
+            confidence: 1.0,
+            source: firstAgent.id,
+            timestamp: new Date()
+          }
+        }
+      ];
+    };
+
+    // Second agent consumes intermediate, produces test_output
+    const secondAgent = new MockAgent();
+    secondAgent.id = 'second-agent';
+    secondAgent.consumesContext = ['intermediate'];
+    secondAgent.producesContext = ['test_output'];
+    secondAgent.process = async (context) => {
+      const intermediate = context.get<string>('intermediate');
+      if (!intermediate) return [];
+
+      return [
+        {
+          type: 'add',
+          item: {
+            key: 'test_output',
+            value: `Step 2: ${intermediate.value}`,
+            confidence: 1.0,
+            source: secondAgent.id,
+            timestamp: new Date()
+          }
+        }
+      ];
+    };
+
+    orchestrator.registerAgent(firstAgent);
+    orchestrator.registerAgent(secondAgent);
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'test_input',
+        value: 'test value',
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+
+    expect(store.has('intermediate')).toBe(true);
+    expect(store.has('test_output')).toBe(true);
+    expect(store.get('test_output')?.value).toBe('Step 2: Step 1: test value');
+  });
+
+  test('should limit maximum iterations to prevent loops', async () => {
+    // Create an agent that keeps updating the same key
+    const loopingAgent = new MockAgent();
+    loopingAgent.id = 'looping-agent';
+    loopingAgent.consumesContext = ['counter'];
+    loopingAgent.producesContext = ['counter'];
+
+    let counter = 0;
+
+    loopingAgent.process = async (context) => {
+      counter++;
+
+      return [
+        {
+          type: 'update',
+          key: 'counter',
+          value: counter
+        }
+      ];
+    };
+
+    orchestrator.registerAgent(loopingAgent);
+
+    const initialContext: MCP.ContextItem[] = [
+      {
+        key: 'counter',
+        value: 0,
+        confidence: 1.0,
+        source: 'user',
+        timestamp: new Date()
+      }
+    ];
+
+    await orchestrator.process(initialContext);
+
+    const store = orchestrator.getContextStore();
+    const finalValue = store.get<number>('counter')?.value;
+
+    // Should be limited by maxIterations (default 10)
+    expect(finalValue).toBeLessThanOrEqual(10);
+  });
+});
