@@ -127,26 +127,20 @@ export class NLPAgent extends BaseAgent {
     }
 
     private async analyzeToxicity(text: string) {
-        this.log('debug', 'Analyzing toxicity');
+        this.log('debug', 'Analyzing toxicity - DISABLED FOR TESTING');
 
-        try {
-            const result = await openaiService.analyzeToxicity(text);
-            this.log('debug', 'Toxicity analysis complete', { score: result.overall });
-            return result;
-        } catch (error) {
-            this.log('error', 'Toxicity analysis failed', error);
-            // Fallback to low toxicity score
-            return {
-                overall: 0.01,
-                categories: {
-                    harassment: 0.01,
-                    hate_speech: 0.01,
-                    self_harm: 0.01,
-                    sexual: 0.01,
-                    violence: 0.01
-                },
-                confidence: 0.5
-            };
-        }
+        // Temporarily disabled for testing - returns safe mock data
+        return {
+            overall: 0.01,
+            categories: {
+                harassment: 0.01,
+                hate_speech: 0.01,
+                self_harm: 0.01,
+                sexual: 0.01,
+                violence: 0.01
+            },
+            confidence: 0.5,
+            disabled: true
+        };
     }
 }

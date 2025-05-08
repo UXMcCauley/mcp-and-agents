@@ -38,14 +38,24 @@ class QuickBooksService {
     async getPaymentsReceived(startDate: string, endDate: string): Promise<any[]> {
         try {
             return new Promise((resolve, reject) => {
-                this.qbo.findPayments({
-                    query: `TxnDate >= '${startDate}' AND TxnDate <= '${endDate}'`
-                }, (err: any, payments: any) => {
+                // Get all payments first (since custom queries aren't supported)
+                this.qbo.findPayments((err: any, payments: any) => {
                     if (err) {
                         logger.error('Error fetching QuickBooks payments:', err);
                         reject(err);
                     } else {
-                        resolve(payments?.QueryResponse?.Payment || []);
+                        const allPayments = payments?.QueryResponse?.Payment || [];
+                        
+                        // Filter payments by date range locally
+                        const filteredPayments = allPayments.filter((payment: any) => {
+                            const txnDate = new Date(payment.TxnDate);
+                            const start = new Date(startDate);
+                            const end = new Date(endDate);
+                            return txnDate >= start && txnDate <= end;
+                        });
+                        
+                        logger.info(`Filtered ${filteredPayments.length} payments between ${startDate} and ${endDate}`);
+                        resolve(filteredPayments);
                     }
                 });
             });

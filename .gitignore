@@ -1,29 +1,41 @@
-#Dependencies
-node_modules
-npm-debug.log
-yarn-error.log
-Build
-dist
-build
-#Environment variables
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
 .env
 .env.local
-.env.*.local
-Logs
-logs
-*.log
-#Editor directories and files
-.idea
-.vscode
-*.suo
-.ntvs
-*.njsproj
-*.sln
-*.sw?
-#OS generated files
-.DS_Store
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS generated files
 Thumbs.db
-#MongoDB data directory
-data
-Test coverage
-coverage
+
+# IDE
+.vscode/
+.idea/
+
+# QuickBooks OAuth files (these often contain sensitive data)
+new-company-oauth.js
+targeted-oauth.js
+oauth-*.js
+
+# Temporary files
+tmp/
+temp/
