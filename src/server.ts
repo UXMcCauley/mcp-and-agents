@@ -5,6 +5,9 @@ import { config } from './config';
 import { logger } from './services/logging';
 // import { metricsMiddleware } from './services/metrics';
 import { apiRoutes } from './api/routes';
+// In server.ts after the app is initialized -- Quickbooks
+// @ts-ignore
+import { SchedulerService } from "./services/quickbooks"
 
 // Initialize express app
 const app = express();
@@ -30,6 +33,9 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
         message: config.environment === 'development' ? err.message : 'Something went wrong'
     });
 });
+
+// Initialize scheduler -- Quickbooks
+SchedulerService.initialize();
 
 // Start server
 const PORT = config.port;

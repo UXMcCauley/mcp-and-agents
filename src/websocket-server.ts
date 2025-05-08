@@ -1,9 +1,8 @@
-import * as express from 'express';
+import express from 'express';
 import * as http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { MCPOrchestrator } from './mcp/orchestrator';
-import { NLPAgent } from './agents';
-import { BiasDetectionAgent } from './agents';
+import { NLPAgent, BiasDetectionAgent, QuickBooksFinanceAgent } from './agents';
 import { logger } from './services/logging';
 import { config } from './config';
 import { MCP } from './mcp/types';
@@ -32,6 +31,7 @@ io.on('connection', (socket) => {
     const orchestrator = new MCPOrchestrator();
     orchestrator.registerAgent(new NLPAgent());
     orchestrator.registerAgent(new BiasDetectionAgent());
+    orchestrator.registerAgent(new QuickBooksFinanceAgent());
 
     // Store in session map
     sessions.set(socket.id, orchestrator);
@@ -75,6 +75,47 @@ io.on('connection', (socket) => {
         } catch (error) {
             logger.error('WebSocket analyze-text error:', error);
             socket.emit('error', { message: 'Failed to analyze text' });
+        }
+    });
+
+    // Handle QuickBooks financial analysis
+    socket.on('analyze-financials', async (data) => {
+        try {
+            const { type, ...params } = data;
+
+            if (!type) {
+                socket.emit('error', { message: 'Financial request type is required' });
+                return;
+            }
+
+            // Create initial context for financial request
+            const initialContext: MCP.ContextItem[] = [
+                {
+                    key: 'financial_request',
+                    value: { type, ...params },
+                    confidence: 1.0,
+                    source: 'user',
+                    timestamp: new Date()
+                }
+            ];
+
+            // Process through the orchestrator
+            await orchestrator.process(initialContext);
+
+            // Extract results
+            const store = orchestrator.getContextStore();
+
+            // Send financial results to client
+            const results = {
+                financialData: store.get('financial_data')?.value,
+                analysis: store.get('financial_analysis')?.value,
+                report: store.get('financial_report')?.value
+            };
+
+            socket.emit('financial-results', results);
+        } catch (error) {
+            logger.error('WebSocket analyze-financials error:', error);
+            socket.emit('error', { message: 'Failed to analyze financials' });
         }
     });
 

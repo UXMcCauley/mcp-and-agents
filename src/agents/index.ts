@@ -4,6 +4,7 @@ import { BiasDetectionAgent } from './bias-detection-agent';
 import { JobRequisiteAgent } from './job-requisite-agent';
 import { ComplianceAgent } from './compliance-agent';
 import { HRResponseAgent } from './hr-response-agent';
+import { QuickBooksFinanceAgent } from './quickbooks-finance-agent';
 
 // Re-export all agents
 export {
@@ -12,7 +13,8 @@ export {
     BiasDetectionAgent,
     JobRequisiteAgent,
     ComplianceAgent,
-    HRResponseAgent
+    HRResponseAgent,
+    QuickBooksFinanceAgent
 };
 
 // Factory function to create an agent by ID
@@ -28,6 +30,8 @@ export function createAgent(agentId: string): BaseAgent {
             return new ComplianceAgent();
         case 'hr-response-agent':
             return new HRResponseAgent();
+        case 'quickbooks-finance-agent':
+            return new QuickBooksFinanceAgent();
         default:
             throw new Error(`Unknown agent ID: ${agentId}`);
     }
@@ -60,6 +64,11 @@ export function getAvailableAgents() {
             id: 'hr-response-agent',
             name: 'HR Response Agent',
             description: 'Generates bias-free HR responses'
+        },
+        {
+            id: 'quickbooks-finance-agent',
+            name: 'QuickBooks Financial Analysis Agent',
+            description: 'Analyzes financial data from QuickBooks API'
         }
     ];
 }
