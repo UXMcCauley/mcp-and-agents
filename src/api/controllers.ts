@@ -264,6 +264,8 @@ async function createOrchestrator(sessionId: string): Promise<MCPOrchestrator> {
 export async function quarterlyAnalysis(req: Request, res: Response) {
     try {
         const { year, quarter, sessionId } = req.body;
+        
+        logger.info('Quarterly analysis request received', { year, quarter, sessionId });
 
         if (!year || !quarter) {
             return res.status(400).json({ error: 'Year and quarter are required' });
@@ -275,9 +277,13 @@ export async function quarterlyAnalysis(req: Request, res: Response) {
         if (!orchestrator) {
             // Create a new session with the QuickBooks agent
             const newSessionId = sessionId || uuidv4();
+            logger.info('Creating new orchestrator with QuickBooks agent', { sessionId: newSessionId });
+            
             orchestrator = new MCPOrchestrator();
             orchestrator.registerAgent(new QuickBooksFinanceAgent());
             sessions.set(newSessionId, orchestrator);
+            
+            logger.info('QuickBooks agent registered');
         }
 
         // Create initial context
@@ -294,25 +300,54 @@ export async function quarterlyAnalysis(req: Request, res: Response) {
                 timestamp: new Date()
             }
         ];
+        
+        logger.info('Initial context created', { initialContext });
 
         // Process through the MCP
+        logger.info('Processing through orchestrator...');
         await orchestrator.process(initialContext);
+        logger.info('Orchestrator processing complete');
 
         // Extract results
         const store = orchestrator.getContextStore();
+        
+        // Log all context keys that are available
+        const allKeys = store.getAllKeys();
+        logger.info('Available context keys after processing', { keys: allKeys });
+        
+        // Check each expected key
+        const financialData = store.get('financial_data');
+        const financialAnalysis = store.get('financial_analysis');
+        const financialReport = store.get('financial_report');
+        
+        logger.info('Context store contents', {
+            has_financial_data: !!financialData,
+            has_financial_analysis: !!financialAnalysis,
+            has_financial_report: !!financialReport,
+            financial_data_value: financialData?.value,
+            financial_analysis_value: financialAnalysis?.value,
+            financial_report_value: financialReport?.value
+        });
 
         // Build response
         const results = {
             sessionId: sessionId || uuidv4(),
-            data: store.get('financial_data')?.value,
-            analysis: store.get('financial_analysis')?.value,
-            report: store.get('financial_report')?.value
+            data: financialData?.value,
+            analysis: financialAnalysis?.value,
+            report: financialReport?.value,
+            debug: {
+                availableKeys: allKeys,
+                hasData: !!financialData,
+                hasAnalysis: !!financialAnalysis,
+                hasReport: !!financialReport
+            }
         };
-
+        
+        logger.info('Sending response', { results });
         res.json(results);
     } catch (error) {
         logger.error('Error processing quarterly analysis:', error);
-        res.status(500).json({ error: 'Failed to process quarterly analysis' });
+        res.status(500).json({ error: 'Failed to process quarterly analysis', details: error.message });
     }
 }
 

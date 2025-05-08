@@ -13,36 +13,44 @@ export class QuickBooksFinanceAgent extends BaseAgent {
     producesContext = ["financial_data", "financial_analysis", "financial_report"];
 
     async process(context: MCP.ReadonlyContextStore): Promise<MCP.ContextOperation[]> {
+        this.log('info', 'QuickBooks agent process called');
+        
         // Check if we have the required context
         if (!hasRequiredContext(context, ["financial_request"])) {
             this.log('debug', 'Missing required context, skipping');
             return [];
         }
 
-        const financialRequest = context.get<any>("financial_request")!;
+        const financialRequest = context.get<any>("financial_request");
+        this.log('info', 'Found financial request', { request: financialRequest?.value });
+        
         const operations: MCP.ContextOperation[] = [];
 
         try {
-            switch (financialRequest.value.type) {
+            switch (financialRequest?.value?.type) {
                 case 'quarterly_analysis':
+                    this.log('info', 'Processing quarterly analysis');
                     await this.processQuarterlyAnalysis(financialRequest.value, operations);
                     break;
 
                 case 'payments_received':
+                    this.log('info', 'Processing payments received');
                     await this.processPaymentsReceived(financialRequest.value, operations);
                     break;
 
                 case 'profit_loss':
+                    this.log('info', 'Processing profit & loss');
                     await this.processProfitLoss(financialRequest.value, operations);
                     break;
 
                 default:
-                    this.log('warn', `Unknown financial request type: ${financialRequest.value.type}`);
+                    this.log('warn', `Unknown financial request type: ${financialRequest?.value?.type}`);
             }
         } catch (error) {
             this.log('error', 'Error processing financial request', error);
         }
 
+        this.log('info', `QuickBooks agent returning ${operations.length} operations`);
         return operations;
     }
 
