@@ -316,4 +316,112 @@ export async function quarterlyAnalysis(req: Request, res: Response) {
     }
 }
 
-// Similar implementations for paymentsAnalysis and profitLossAnalysis...
+// Payments analysis
+export async function paymentsAnalysis(req: Request, res: Response) {
+    try {
+        const { startDate, endDate, sessionId } = req.body;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: 'Start date and end date are required' });
+        }
+
+        // Get or create an orchestrator for this session
+        let orchestrator = sessionId ? sessions.get(sessionId) : undefined;
+
+        if (!orchestrator) {
+            // Create a new session with the QuickBooks agent
+            const newSessionId = sessionId || uuidv4();
+            orchestrator = new MCPOrchestrator();
+            orchestrator.registerAgent(new QuickBooksFinanceAgent());
+            sessions.set(newSessionId, orchestrator);
+        }
+
+        // Create initial context
+        const initialContext: MCP.ContextItem[] = [
+            {
+                key: 'financial_request',
+                value: {
+                    type: 'payments_received',
+                    startDate,
+                    endDate
+                },
+                confidence: 1.0,
+                source: 'user',
+                timestamp: new Date()
+            }
+        ];
+
+        // Process through the MCP
+        await orchestrator.process(initialContext);
+
+        // Extract results
+        const store = orchestrator.getContextStore();
+
+        // Build response
+        const results = {
+            sessionId: sessionId || uuidv4(),
+            data: store.get('financial_data')?.value,
+            analysis: store.get('financial_analysis')?.value
+        };
+
+        res.json(results);
+    } catch (error) {
+        logger.error('Error processing payments analysis:', error);
+        res.status(500).json({ error: 'Failed to process payments analysis' });
+    }
+}
+
+// Profit and loss analysis
+export async function profitLossAnalysis(req: Request, res: Response) {
+    try {
+        const { startDate, endDate, sessionId } = req.body;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: 'Start date and end date are required' });
+        }
+
+        // Get or create an orchestrator for this session
+        let orchestrator = sessionId ? sessions.get(sessionId) : undefined;
+
+        if (!orchestrator) {
+            // Create a new session with the QuickBooks agent
+            const newSessionId = sessionId || uuidv4();
+            orchestrator = new MCPOrchestrator();
+            orchestrator.registerAgent(new QuickBooksFinanceAgent());
+            sessions.set(newSessionId, orchestrator);
+        }
+
+        // Create initial context
+        const initialContext: MCP.ContextItem[] = [
+            {
+                key: 'financial_request',
+                value: {
+                    type: 'profit_loss',
+                    startDate,
+                    endDate
+                },
+                confidence: 1.0,
+                source: 'user',
+                timestamp: new Date()
+            }
+        ];
+
+        // Process through the MCP
+        await orchestrator.process(initialContext);
+
+        // Extract results
+        const store = orchestrator.getContextStore();
+
+        // Build response
+        const results = {
+            sessionId: sessionId || uuidv4(),
+            data: store.get('financial_data')?.value,
+            analysis: store.get('financial_analysis')?.value
+        };
+
+        res.json(results);
+    } catch (error) {
+        logger.error('Error processing profit and loss analysis:', error);
+        res.status(500).json({ error: 'Failed to process profit and loss analysis' });
+    }
+}

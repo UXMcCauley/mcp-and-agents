@@ -10,11 +10,8 @@ router.post('/create-session', controllers.createSession);
 router.get('/sessions/:sessionId', controllers.getSession);
 
 // QuickBooks financial endpoints
-// @ts-ignore
 router.post('/financial/quarterly-analysis', controllers.quarterlyAnalysis);
-// @ts-ignore
 router.post('/financial/payments', controllers.paymentsAnalysis);
-// @ts-ignore
 router.post('/financial/profit-loss', controllers.profitLossAnalysis);
 
 // Agent management
