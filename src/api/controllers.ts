@@ -347,7 +347,7 @@ export async function quarterlyAnalysis(req: Request, res: Response) {
         res.json(results);
     } catch (error) {
         logger.error('Error processing quarterly analysis:', error);
-        res.status(500).json({ error: 'Failed to process quarterly analysis', details: error.message });
+        res.status(500).json({ error: 'Failed to process quarterly analysis', details: error instanceof Error ? error.message : 'Unknown error' });
     }
 }
 
